@@ -19,7 +19,8 @@ public class PersonItemProcessor implements ItemProcessor<Person, Person> {
         final Person transformedPerson = new Person(firstName, lastName);
 
         log.info(Thread.currentThread().getId()+" Converting (" + person + ") into (" + transformedPerson + ")");
-        Thread.sleep(500 + new Random().nextInt(1500));
+        Thread.sleep(10 + new Random().nextInt(1000));
+        log.debug(Thread.currentThread().getId()+" done");
         return transformedPerson;
     }
 }

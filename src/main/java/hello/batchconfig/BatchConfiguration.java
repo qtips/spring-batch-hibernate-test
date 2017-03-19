@@ -1,16 +1,15 @@
 package hello.batchconfig;
 
-import hello.batchimpl.JobCompletionNotificationListener;
 import hello.Person;
+import hello.batchimpl.JobCompletionNotificationListener;
 import hello.batchimpl.PersonItemProcessor;
-import org.h2.tools.Server;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
@@ -20,12 +19,11 @@ import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import javax.sql.DataSource;
-import java.sql.SQLException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 @Configuration
 @EnableBatchProcessing
@@ -41,7 +39,9 @@ public class BatchConfiguration {
     private DataSource dataSource;
 
     @Bean
-    public
+    public BlockingQueue<Person> queue() {
+        return new ArrayBlockingQueue<Person>(10);
+    }
 
     @Bean
     public FlatFileItemReader<Person> reader() {
@@ -58,21 +58,22 @@ public class BatchConfiguration {
         return reader;
     }
 
-    @Bean
+    //    @Bean
     public PersonItemProcessor processor() {
         return new PersonItemProcessor();
     }
 
     @Bean
-    public JdbcBatchItemWriter<Person> writer() {
+    public ItemWriter<Person> writer() {
         JdbcBatchItemWriter<Person> writer = new JdbcBatchItemWriter<Person>();
         writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<Person>());
-        writer.setSql("INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)");
+        writer.setSql("INSERT INTO person (first_name, last_name) VALUES (:firstName, :lastName)");
         writer.setDataSource(dataSource);
+//        return new QueueWriter<Person>(queue());
         return writer;
     }
 
-    @Bean
+    //@Bean
     public Job importUserJob(JobCompletionNotificationListener listener) {
         return jobBuilderFactory.get("importUserJob")
                 .incrementer(new RunIdIncrementer())
@@ -83,27 +84,22 @@ public class BatchConfiguration {
     }
 
 
-    @Bean
+    //@Bean
     public Step step1() {
         return stepBuilderFactory.get("step1")
-                .<Person, Person>chunk(10)
+                .<Person, Person>chunk(2)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
-                .taskExecutor(new SimpleAsyncTaskExecutor())
                 .build();
     }
 
-    @Bean(destroyMethod = "stop")
-    @DependsOn("h2WebServer")
-    public Server h2Server() throws SQLException {
-        return Server.createTcpServer("-tcp","-tcpAllowOthers","-tcpPort","9092").start();
-    }
 
-    @Bean(destroyMethod = "stop" )
-    public Server h2WebServer() throws SQLException {
-        return Server.createWebServer("-web","-webAllowOthers","-webPort","8082").start();
-    }
+
+
+
+
+
 
 }
 
