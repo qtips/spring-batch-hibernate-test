@@ -5,8 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
 
-import java.util.Random;
-
 public class PersonItemProcessor implements ItemProcessor<Person, Person> {
 
     Logger log = LoggerFactory.getLogger(PersonItemProcessor.class);
@@ -19,7 +17,8 @@ public class PersonItemProcessor implements ItemProcessor<Person, Person> {
         final Person transformedPerson = new Person(firstName, lastName);
 
         log.info(Thread.currentThread().getId()+" Converting (" + person + ") into (" + transformedPerson + ")");
-        Thread.sleep(10 + new Random().nextInt(1000));
+        Thread.sleep(200);
+//        Thread.sleep(10 + new Random().nextInt(1000));
         log.debug(Thread.currentThread().getId()+" done");
         return transformedPerson;
     }

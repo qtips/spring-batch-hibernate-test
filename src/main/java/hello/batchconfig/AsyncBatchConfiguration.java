@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Future;
 
@@ -33,7 +34,8 @@ public class AsyncBatchConfiguration {
     @Autowired
     private JobBuilderFactory jobBuilderFactory;
 
-    @Bean
+    // uncomment to activate (but must comment other Job beans).
+    //@Bean
     public Job importUserJob(JobCompletionNotificationListener listener) {
         return jobBuilderFactory.get("importUserJob")
                 .incrementer(new RunIdIncrementer())
@@ -43,6 +45,7 @@ public class AsyncBatchConfiguration {
                 .build();
     }
 
+    // even though the async step runs the processor in multiple threads, all are run in same transaction.
     @Bean
     public Step asyncStep() {
         return stepBuilderFactory.get("asyncStep")
@@ -50,7 +53,7 @@ public class AsyncBatchConfiguration {
                 .reader(batchConfiguration.reader())
                 .processor(asyncProcessor())
                 .writer(asyncWriter())
-                .taskExecutor(new SimpleAsyncTaskExecutor())
+                .taskExecutor(batchConfiguration.taskExecutor())
                 .build();
     }
 
@@ -58,16 +61,12 @@ public class AsyncBatchConfiguration {
     public ItemProcessor<Person, Future<Person>> asyncProcessor() {
         AsyncItemProcessor<Person, Person> asyncProcessor = new AsyncItemProcessor<>();
         asyncProcessor.setDelegate(new PersonItemProcessor());
-        asyncProcessor.setTaskExecutor(new SimpleAsyncTaskExecutor());
+        asyncProcessor.setTaskExecutor(batchConfiguration.taskExecutor());
         return asyncProcessor;
     }
 
     @Bean
     public ItemWriter<Future<Person>> asyncWriter() {
-//        JdbcBatchItemWriter<Person> writer = new JdbcBatchItemWriter<Person>();
-//        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<Person>());
-//        writer.setSql("INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)");
-//        writer.setDataSource(dataSource);
         AsyncItemWriter<Person> personAsyncItemWriter = new AsyncItemWriter<>();
         personAsyncItemWriter.setDelegate(batchConfiguration.writer());
         return personAsyncItemWriter;

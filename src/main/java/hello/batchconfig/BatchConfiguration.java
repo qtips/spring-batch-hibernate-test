@@ -2,6 +2,7 @@ package hello.batchconfig;
 
 import hello.Person;
 import hello.batchimpl.JobCompletionNotificationListener;
+import hello.batchimpl.LoggedFlatFileItemReader;
 import hello.batchimpl.PersonItemProcessor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.sql.DataSource;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -44,8 +46,8 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public FlatFileItemReader<Person> reader() {
-        FlatFileItemReader<Person> reader = new FlatFileItemReader<Person>();
+    public LoggedFlatFileItemReader<Person> reader() {
+        LoggedFlatFileItemReader<Person> reader = new LoggedFlatFileItemReader<>();
         reader.setResource(new ClassPathResource("sample-data.csv"));
         reader.setLineMapper(new DefaultLineMapper<Person>() {{
             setLineTokenizer(new DelimitedLineTokenizer() {{
@@ -58,7 +60,7 @@ public class BatchConfiguration {
         return reader;
     }
 
-    //    @Bean
+    @Bean
     public PersonItemProcessor processor() {
         return new PersonItemProcessor();
     }
@@ -73,7 +75,7 @@ public class BatchConfiguration {
         return writer;
     }
 
-    //@Bean
+    @Bean
     public Job importUserJob(JobCompletionNotificationListener listener) {
         return jobBuilderFactory.get("importUserJob")
                 .incrementer(new RunIdIncrementer())
@@ -91,9 +93,17 @@ public class BatchConfiguration {
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
+                .taskExecutor(taskExecutor()) // this makes step multithreaded. Each thread start a new transaction!
                 .build();
     }
 
+
+    @Bean
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setCorePoolSize(5);
+        return threadPoolTaskExecutor;
+    }
 
 
 
