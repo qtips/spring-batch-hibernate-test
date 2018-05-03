@@ -1,11 +1,14 @@
 package hello;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
 @Entity
 @Table
+@Transactional(transactionManager = "txManager")
 public class Person {
 
     private String lastName;
